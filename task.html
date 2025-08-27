@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive Quiz – CODTECH Task 1</title>
+  <style>
+    :root{
+      --bg:#0f1226; --card:#171a36; --muted:#8e95b3; --text:#eef1ff; --accent:#6c7cff; --success:#2ecc71; --danger:#ff5c7a;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;background:radial-gradient(1200px 800px at 10% -10%, #1f2360, transparent),radial-gradient(900px 700px at 110% 10%, #1c3c6b, transparent),var(--bg);color:var(--text);}
+    .container{max-width:960px;margin:32px auto;padding:24px}
+
+    .app{
+      background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      backdrop-filter: blur(6px);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:24px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,.35);
+    }
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#9e7bff);display:grid;place-items:center;color:white;font-weight:800;}
+    h1{font-size:1.25rem;margin:0}
+    .sub{color:var(--muted);font-size:.9rem}
+
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    select,button,input[type="number"]{
+      background:var(--card); color:var(--text); border:1px solid rgba(255,255,255,0.12);
+      padding:10px 12px; border-radius:12px; outline:none;
+    }
+    button{cursor:pointer; transition: transform .08s ease, background .2s ease}
+    button:hover{transform: translateY(-1px)}
+    .primary{background:var(--accent); border-color:transparent}
+    .ghost{background:transparent}
+
+    .progress{
+      --pct:0; height:10px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden; margin:16px 0 8px
+    }
+    .bar{height:100%;width:calc(var(--pct) * 1%); background:linear-gradient(90deg,var(--accent),#9e7bff)}
+    .meta{display:flex;justify-content:space-between;color:var(--muted);font-size:.9rem;margin-bottom:12px}
+
+    .card{background:var(--card); border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:18px;}
+    .qtext{font-size:1.1rem;margin:0 0 10px}
+    .options{display:grid; gap:10px}
+
+    .opt{display:flex;align-items:center;gap:12px; padding:12px; border-radius:14px; background:#12142b; border:1px solid rgba(255,255,255,.08); cursor:pointer; text-align:left}
+    .opt:hover{border-color:rgba(255,255,255,.22)}
+    .opt[disabled]{opacity:.75; cursor:not-allowed}
+
+    .opt.correct{background:rgba(46, 204, 113,.12); border-color:rgba(46, 204, 113,.45)}
+    .opt.wrong{background:rgba(255,92,122,.12); border-color:rgba(255,92,122,.45)}
+
+    .pill{min-width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.06);display:grid;place-items:center;font-weight:700}
+    .explain{margin-top:10px;color:var(--muted)}
+
+    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+
+    .summary{display:none}
+    .summary.show{display:block}
+    .grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}
+    .stat{padding:16px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08)}
+    .small{color:var(--muted); font-size:.85rem}
+
+    .footer{margin-top:22px;color:var(--muted);font-size:.85rem;text-align:center}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#10122a; border:1px solid rgba(255,255,255,.12); border-bottom-width:3px; padding:1px 6px; border-radius:8px}
+
+    @media (max-width:560px){
+      header{align-items:flex-start;gap:8px}
+      .controls{width:100%}
+      select,button,input[type="number"]{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app" role="application" aria-label="Interactive Quiz Application">
+      <header>
+        <div class="brand">
+          <div class="logo" aria-hidden="true">Q?</div>
+          <div>
+            <h1>Interactive Quiz</h1>
+            <div class="sub">CODTECH – Task 1 • Instant feedback • Dynamic loading • Scoring</div>
+          </div>
+        </div>
+        <div class="controls" aria-label="Quiz Controls">
+          <select id="category"></select>
+          <input id="limit" type="number" min="3" max="25" step="1" value="10" aria-label="Number of questions"/>
+          <button id="loadBtn" class="ghost" title="Load new questions">Load New Set</button>
+          <button id="restartBtn" class="primary">Restart</button>
+        </div>
+      </header>
+
+      <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
+      <div class="meta"><span id="progressText">0 / 0</span><span id="scoreText">Score: 0</span></div>
+
+      <section class="card" id="quizCard">
+        <p class="qtext" id="qText">Loading questions…</p>
+        <div class="options" id="options"></div>
+        <div class="explain" id="explain" role="status" aria-live="polite"></div>
+        <div class="actions">
+          <button id="nextBtn" class="primary" disabled>Next</button>
+        </div>
+      </section>
+
+      <section class="summary card" id="summary">
+        <h2>Results</h2>
+        <div class="grid">
+          <div class="stat"><div class="small">Score</div><div id="sumScore" style="font-size:1.6rem;font-weight:800"></div></div>
+          <div class="stat"><div class="small">Accuracy</div><div id="sumAcc" style="font-size:1.6rem;font-weight:800"></div></div>
+          <div class="stat"><div class="small">Time</div><div id="sumTime" style="font-size:1.6rem;font-weight:800"></div></div>
+          <div class="stat"><div class="small">Best (local)</div><div id="sumBest" style="font-size:1.6rem;font-weight:800"></div></div>
+        </div>
+        <div style="margin-top:10px" class="small">Tip: Press <span class="kbd">N</span> for next question, <span class="kbd">R</span> to restart.</div>
+      </section>
+
+      <div class="footer">Dynamic loading tries <span class="kbd">questions.json</span> if present. Falls back to built‑in sample set.</div>
+    </div>
+  </div>
+
+  <script>
+  // ====== Data: Built-in fallback questions (used if questions.json not found) ======
+  const BUILT_IN_QUESTIONS = [
+    { id:1, category:"JavaScript", question:"What is the result of: Boolean('0')?", options:["false","true","undefined","0"], answerIndex:1, explanation:"Any non-empty string is truthy in JavaScript, including '0'." },
+    { id:2, category:"JavaScript", question:"Which method converts JSON string to object?", options:["JSON.parse","JSON.stringify","Object.from","toJSON"], answerIndex:0, explanation:"JSON.parse converts a JSON string into a JavaScript value." },
+    { id:3, category:"Web", question:"Which HTML tag is used to link a JavaScript file?", options:["<javascript>","<script>","<js>","<link rel='script'>"], answerIndex:1, explanation:"Use the <script> tag with src attribute to include JS." },
+    { id:4, category:"Web", question:"CSS stands for?", options:["Cascading Style Sheets","Computer Style Sheets","Creative Sheet Styles","Cascade Sheet Styling"], answerIndex:0, explanation:"CSS = Cascading Style Sheets." },
+    { id:5, category:"Programming", question:"What does === check in JS?", options:["Value only","Type only","Value and Type","Reference only"], answerIndex:2, explanation:"Strict equality checks both value and type without coercion." },
+    { id:6, category:"Programming", question:"Which is NOT a primitive in JS?", options:["String","Number","Object","Boolean"], answerIndex:2, explanation:"Object is non-primitive; primitives include string, number, boolean, null, undefined, symbol, bigint." },
+    { id:7, category:"JavaScript", question:"let vs var key difference?", options:["Performance","Block scoping","Syntax highlighting","None"], answerIndex:1, explanation:"let is block-scoped; var is function-scoped." },
+    { id:8, category:"Web", question:"Where should you place critical CSS for best performance?", options:["At the end of body","Inline in <head>","In a comment","In a cookie"], answerIndex:1, explanation:"Inline critical CSS in <head> to avoid render-blocking." },
+    { id:9, category:"Programming", question:"Array.prototype.map purpose?", options:["Mutate array","Filter items","Transform to new array","Sort in place"], answerIndex:2, explanation:"map returns a new array with transformed elements." },
+    { id:10, category:"JavaScript", question:"What is NaN === NaN?", options:["true","false","depends","error"], answerIndex:1, explanation:"NaN is not equal to itself; use Number.isNaN to check." },
+  ];
+
+  // ====== State ======
+  const state = {
+    questions: [],
+    current: 0,
+    score: 0,
+    answered: false,
+    startedAt: 0,
+    totalTimeMs: 0,
+  };
+
+  // ====== Elements ======
+  const els = {
+    category: document.getElementById('category'),
+    limit: document.getElementById('limit'),
+    loadBtn: document.getElementById('loadBtn'),
+    restartBtn: document.getElementById('restartBtn'),
+    bar: document.getElementById('bar'),
+    progressText: document.getElementById('progressText'),
+    scoreText: document.getElementById('scoreText'),
+    qText: document.getElementById('qText'),
+    options: document.getElementById('options'),
+    explain: document.getElementById('explain'),
+    nextBtn: document.getElementById('nextBtn'),
+    summary: document.getElementById('summary'),
+    sumScore: document.getElementById('sumScore'),
+    sumAcc: document.getElementById('sumAcc'),
+    sumTime: document.getElementById('sumTime'),
+    sumBest: document.getElementById('sumBest'),
+  };
+
+  // ====== Utils ======
+  const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]} return arr;
+  }
+  function fmtMS(ms){
+    const s=Math.floor(ms/1000), m=Math.floor(s/60), r=s%60; return `${m}:${r.toString().padStart(2,'0')}`;
+  }
+
+  // ====== Dynamic Loader ======
+  async function loadQuestionsDynamically(){
+    // Try to fetch from questions.json (same folder). If not found, fall back.
+    try{
+      const res = await fetch('questions.json',{cache:'no-store'});
+      if(!res.ok) throw new Error('No external file');
+      /** Expected file format: [{id,category,question,options:[..],answerIndex,explanation}, ...] */
+      const external = await res.json();
+      if(Array.isArray(external) && external.length){
+        return external;
+      }
+      return BUILT_IN_QUESTIONS;
+    }catch(err){
+      return BUILT_IN_QUESTIONS;
+    }
+  }
+
+  function categoriesFrom(questions){
+    const set = new Set(questions.map(q=>q.category||'General'));
+    return ['All', ...[...set].sort()];
+  }
+
+  function filterByCategory(all, cat){
+    if(!cat || cat==='All') return all.slice();
+    return all.filter(q=>q.category===cat);
+  }
+
+  function sampleQuestions(all, limit){
+    return shuffle(all.slice()).slice(0, Math.min(limit, all.length));
+  }
+
+  function updateProgress(){
+    const total = state.questions.length || 0;
+    const current = Math.min(state.current+1, total);
+    const pct = total ? Math.round((state.current/total)*100) : 0;
+    els.bar.style.setProperty('--pct', pct);
+    els.progressText.textContent = `${current- (state.answered?0:1)} / ${total}`;
+    els.scoreText.textContent = `Score: ${state.score}`;
+  }
+
+  function renderQuestion(){
+    const total = state.questions.length;
+    if(state.current >= total){
+      return showSummary();
+    }
+    const q = state.questions[state.current];
+    els.qText.textContent = q.question;
+    els.options.innerHTML = '';
+    els.explain.textContent='';
+    els.nextBtn.disabled = true;
+    state.answered = false;
+
+    q.options.forEach((optText, idx)=>{
+      const btn = document.createElement('button');
+      btn.className='opt';
+      btn.setAttribute('role','button');
+      btn.innerHTML = `<span class="pill">${String.fromCharCode(65+idx)}</span> <span>${optText}</span>`;
+      btn.addEventListener('click', ()=> selectOption(btn, idx, q));
+      els.options.appendChild(btn);
+    });
+
+    updateProgress();
+  }
+
+  function selectOption(btn, idx, q){
+    if(state.answered) return; // prevent double
+    state.answered = true;
+
+    // mark all disabled
+    [...els.options.children].forEach(b=>b.setAttribute('disabled','true'));
+
+    const correct = idx === q.answerIndex;
+    if(correct){
+      state.score += 1;
+      btn.classList.add('correct');
+      els.explain.innerHTML = `✅ Correct. ${q.explanation || ''}`;
+    } else {
+      btn.classList.add('wrong');
+      const correctBtn = els.options.children[q.answerIndex];
+      if(correctBtn) correctBtn.classList.add('correct');
+      els.explain.innerHTML = `❌ Incorrect. Correct answer is <strong>${String.fromCharCode(65+q.answerIndex)}</strong>. ${q.explanation || ''}`;
+    }
+
+    els.nextBtn.disabled = false;
+    updateProgress();
+  }
+
+  function showSummary(){
+    state.totalTimeMs += Date.now() - state.startedAt;
+    const total = state.questions.length;
+    const acc = total ? Math.round((state.score/total)*100) : 0;
+    els.sumScore.textContent = `${state.score} / ${total}`;
+    els.sumAcc.textContent = `${acc}%`;
+    els.sumTime.textContent = fmtMS(state.totalTimeMs);
+
+    // local best (per size + category key)
+    const key = `best:${els.category.value}:${els.limit.value}`;
+    const prev = Number(localStorage.getItem(key) || 0);
+    const best = Math.max(prev, acc);
+    localStorage.setItem(key, String(best));
+    els.sumBest.textContent = `${best}%`;
+
+    els.summary.classList.add('show');
+    document.getElementById('quizCard').style.display='none';
+  }
+
+  async function startQuiz(newSet=false){
+    els.summary.classList.remove('show');
+    document.getElementById('quizCard').style.display='block';
+
+    if(newSet || !state._all){
+      const all = await loadQuestionsDynamically();
+      state._all = all; // cache full set
+      // populate categories
+      const cats = categoriesFrom(all);
+      els.category.innerHTML = cats.map(c=>`<option>${c}</option>`).join('');
+    }
+
+    const filtered = filterByCategory(state._all, els.category.value);
+    state.questions = sampleQuestions(filtered, Number(els.limit.value) || 10);
+    state.current = 0; state.score = 0; state.totalTimeMs = 0; state.startedAt = Date.now();
+    renderQuestion();
+  }
+
+  function next(){
+    if(!state.answered) return; // force answering first
+    state.current += 1;
+    state.startedAt = Date.now();
+    if(state.current < state.questions.length){
+      renderQuestion();
+    } else {
+      showSummary();
+    }
+  }
+
+  // ====== Events ======
+  els.nextBtn.addEventListener('click', next);
+  els.restartBtn.addEventListener('click', ()=> startQuiz());
+  els.loadBtn.addEventListener('click', ()=> startQuiz(true));
+  els.category.addEventListener('change', ()=> startQuiz());
+  els.limit.addEventListener('change', ()=> startQuiz());
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='n' || e.key==='N') next();
+    if(e.key==='r' || e.key==='R') startQuiz();
+  });
+
+  // ====== Init ======
+  startQuiz(true);
+
+  // ====== Developer Notes ======
+  // 1) To use dynamic external questions, create a file named `questions.json` in the same folder as this HTML with the format:
+  //    [
+  //      {"id":101, "category":"JavaScript", "question":"...", "options":["A","B","C","D"], "answerIndex":2, "explanation":"..."},
+  //      ...
+  //    ]
+  // 2) The app will attempt to fetch it on each "Load New Set" click; if the file is missing it will fall back to the built‑in set.
+  // 3) This app is framework‑free (plain HTML/CSS/JS). You can host it on GitHub Pages / Netlify / Vercel easily.
+  </script>
+</body>
+</html>
